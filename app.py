@@ -43,6 +43,28 @@ st.markdown("""
         .stDataFrame {
             margin-top: 1rem;
         }
+        /* 删除按钮样式 */
+        div[data-testid="stButton"] button[kind="secondary"] {
+            background: none;
+            border: none;
+            color: #ff4b4b;
+            padding: 0;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        div[data-testid="stButton"] button[kind="secondary"]:hover {
+            background: none;
+            opacity: 1;
+        }
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .file-header h3 {
+            margin: 0;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -186,23 +208,23 @@ else:
         # 处理每个文件
         for idx, (tab, filename) in enumerate(zip(tabs, saved_files)):
             with tab:
-                # 添加删除按钮（更柔和的样式）
-                col1, col2 = st.columns([20, 1])
-                with col2:
-                    if st.button("🗑️", key=f"delete_{idx}", help="删除此文件"):
-                        if delete_file(filename):
-                            st.success(f"文件 {filename} 已删除")
-                            st.rerun()
-                        else:
-                            st.error("删除文件失败")
+                # 创建文件标题和删除按钮的容器
+                st.markdown('<div class="file-header">', unsafe_allow_html=True)
+                st.write("### 数据预览")
+                if st.button("🗑️", key=f"delete_{idx}", help="删除此文件", type="secondary"):
+                    if delete_file(filename):
+                        st.success(f"文件 {filename} 已删除")
+                        st.rerun()
+                    else:
+                        st.error("删除文件失败")
+                st.markdown('</div>', unsafe_allow_html=True)
                 
                 # 读取CSV文件
                 filepath = os.path.join('data', filename)
                 df = pd.read_csv(filepath)
                 df = process_percentage(df)  # 处理百分比字段
                 
-                # 显示数据预览
-                st.write("### 数据预览")
+                # 显示数据表格
                 st.dataframe(df, use_container_width=True, height=400)
 
                 # 数据统计分析
