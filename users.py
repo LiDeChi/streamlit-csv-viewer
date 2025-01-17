@@ -38,50 +38,55 @@ def show_login_page():
     st.markdown("""
         <style>
             .login-container {
-                max-width: 200px;
+                max-width: 400px;
                 margin: 0 auto;
-                padding: 0.5rem;
-                margin-top: 2rem;
+                padding: 2rem;
+                margin-top: 4rem;
             }
             .login-title {
                 text-align: center;
-                margin-bottom: 1rem;
+                margin-bottom: 2rem;
                 color: #262730;
-                font-size: 1.2rem;
+                font-size: 2rem;
+                font-weight: 500;
             }
             .stButton > button {
                 width: 100%;
-                margin-top: 0.5rem;
+                margin-top: 1rem;
+                height: 3rem;
+                font-size: 1rem;
             }
             div[data-testid="stForm"] {
                 background-color: white;
-                padding: 1rem;
-                border-radius: 6px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+                padding: 2rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
             div[data-testid="stForm"] > div[data-testid="column"] {
-                padding: 0.3rem 0;
+                padding: 0.5rem 0;
             }
             div[data-testid="stTextInput"] input {
-                font-size: 0.9rem;
+                font-size: 1rem;
+                padding: 0.5rem;
+                height: 2.4rem;
             }
-            div.row-widget.stButton {
-                width: 100px;
-                margin: 0 auto;
+            div[data-testid="stTextInput"] label {
+                font-size: 1rem;
+                font-weight: 500;
             }
         </style>
     """, unsafe_allow_html=True)
     
-    # 创建七列布局，中间列放置登录框
-    col1, col2, col3, col4, col5, col6, col7 = st.columns([3, 2, 1, 1, 1, 2, 3])
+    # 创建五列布局，中间列放置登录框
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    with col4:
+    with col2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<h1 class="login-title">登录</h1>', unsafe_allow_html=True)
         
         with st.form("login_form"):
-            username = st.text_input("用户名", label_visibility="collapsed", placeholder="用户名")
-            password = st.text_input("密码", type="password", label_visibility="collapsed", placeholder="密码")
+            username = st.text_input("用户名", placeholder="请输入用户名")
+            password = st.text_input("密码", type="password", placeholder="请输入密码")
             submit = st.form_submit_button("登录")
             
             if submit:
