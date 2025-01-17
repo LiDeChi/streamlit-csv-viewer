@@ -93,6 +93,14 @@ def create_visualization(df, chart_type, x_axis, y_axis):
     plt.tight_layout()
     return fig
 
+def delete_file(filename):
+    """删除指定的文件"""
+    filepath = os.path.join('data', filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        return True
+    return False
+
 # 检查用户是否已登录
 if not is_authenticated():
     show_login_page()
@@ -128,6 +136,16 @@ else:
         # 处理每个文件
         for idx, (tab, filename) in enumerate(zip(tabs, saved_files)):
             with tab:
+                # 添加删除按钮
+                col1, col2 = st.columns([6, 1])
+                with col2:
+                    if st.button("🗑️ 删除文件", key=f"delete_{idx}", type="primary"):
+                        if delete_file(filename):
+                            st.success(f"文件 {filename} 已删除")
+                            st.rerun()
+                        else:
+                            st.error("删除文件失败")
+                
                 # 读取CSV文件
                 filepath = os.path.join('data', filename)
                 df = pd.read_csv(filepath)
