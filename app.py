@@ -58,11 +58,11 @@ def save_uploaded_file(uploaded_file):
     if not os.path.exists('data'):
         os.makedirs('data')
     
-    # 生成唯一文件名
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"{timestamp}_{uploaded_file.name}"
+    # 直接使用原始文件名
+    filename = uploaded_file.name
     filepath = os.path.join('data', filename)
     
+    # 如果文件已存在，直接覆盖
     with open(filepath, 'wb') as f:
         f.write(uploaded_file.getbuffer())
     return filepath
@@ -71,7 +71,8 @@ def get_saved_files():
     """获取已保存的CSV文件列表"""
     if not os.path.exists('data'):
         return []
-    return sorted([f for f in os.listdir('data') if f.endswith('.csv')], reverse=True)
+    # 按文件名排序，不再按时间戳排序
+    return sorted([f for f in os.listdir('data') if f.endswith('.csv')])
 
 def create_visualization(df, chart_type, x_axis, y_axis):
     """创建可视化图表"""
