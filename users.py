@@ -38,44 +38,50 @@ def show_login_page():
     st.markdown("""
         <style>
             .login-container {
-                max-width: 400px;
+                max-width: 300px;
                 margin: 0 auto;
-                padding: 2rem;
-                margin-top: 4rem;
+                padding: 1rem;
+                margin-top: 2rem;
             }
             .login-title {
                 text-align: center;
-                margin-bottom: 2rem;
+                margin-bottom: 1.5rem;
                 color: #262730;
-                font-size: 2rem;
+                font-size: 1.5rem;
             }
             .stButton > button {
                 width: 100%;
-                margin-top: 1rem;
+                margin-top: 0.5rem;
             }
             div[data-testid="stForm"] {
                 background-color: white;
-                padding: 2rem;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                padding: 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            }
+            div[data-testid="stForm"] > div[data-testid="column"] {
+                padding: 0.5rem 0;
             }
         </style>
     """, unsafe_allow_html=True)
     
-    # 创建居中的容器
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    st.markdown('<h1 class="login-title">登录</h1>', unsafe_allow_html=True)
+    # 创建三列布局，中间列放置登录框
+    col1, col2, col3 = st.columns([1, 1, 1])
     
-    with st.form("login_form"):
-        username = st.text_input("用户名")
-        password = st.text_input("密码", type="password")
-        submit = st.form_submit_button("登录")
+    with col2:
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        st.markdown('<h1 class="login-title">登录</h1>', unsafe_allow_html=True)
         
-        if submit:
-            if login(username, password):
-                st.success("登录成功！")
-                st.rerun()
-            else:
-                st.error("用户名或密码错误！")
-    
-    st.markdown('</div>', unsafe_allow_html=True) 
+        with st.form("login_form"):
+            username = st.text_input("用户名")
+            password = st.text_input("密码", type="password")
+            submit = st.form_submit_button("登录")
+            
+            if submit:
+                if login(username, password):
+                    st.success("登录成功！")
+                    st.rerun()
+                else:
+                    st.error("用户名或密码错误！")
+        
+        st.markdown('</div>', unsafe_allow_html=True) 
