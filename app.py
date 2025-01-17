@@ -138,32 +138,46 @@ def create_visualization(df, chart_type, x_axis, y_axis):
     plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
     plt.rcParams['axes.unicode_minus'] = False
     
+    # 确保数据是可视化的格式
+    df = df.copy()
+    if df[y_axis].dtype == 'object':
+        try:
+            df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
+        except:
+            st.error(f"无法将 {y_axis} 列转换为数值类型")
+            return None
+    
+    # 创建图表
     fig, ax = plt.subplots(figsize=(12, 6))
     
-    if chart_type == "柱状图":
-        # 如果数据点过多，只显示前20个
-        if len(df) > 20:
-            df = df.head(20)
-        sns.barplot(data=df, x=x_axis, y=y_axis, ax=ax)
-    elif chart_type == "折线图":
-        sns.lineplot(data=df, x=x_axis, y=y_axis, ax=ax)
-    elif chart_type == "散点图":
-        sns.scatterplot(data=df, x=x_axis, y=y_axis, ax=ax)
-    elif chart_type == "箱线图":
-        sns.boxplot(data=df, x=x_axis, y=y_axis, ax=ax)
-    elif chart_type == "小提琴图":
-        sns.violinplot(data=df, x=x_axis, y=y_axis, ax=ax)
-    
-    # 设置标签和样式
-    plt.xticks(rotation=45, ha='right', fontsize=10)
-    plt.yticks(fontsize=10)
-    ax.set_xlabel(x_axis, fontsize=12)
-    ax.set_ylabel(y_axis, fontsize=12)
-    ax.set_title(f"{chart_type}: {x_axis} vs {y_axis}", fontsize=14, pad=20)
-    
-    # 调整布局
-    plt.tight_layout()
-    return fig
+    try:
+        if chart_type == "柱状图":
+            # 如果数据点过多，只显示前20个
+            if len(df) > 20:
+                df = df.head(20)
+            sns.barplot(data=df, x=x_axis, y=y_axis, ax=ax, ci=None)
+        elif chart_type == "折线图":
+            sns.lineplot(data=df, x=x_axis, y=y_axis, ax=ax, ci=None)
+        elif chart_type == "散点图":
+            sns.scatterplot(data=df, x=x_axis, y=y_axis, ax=ax)
+        elif chart_type == "箱线图":
+            sns.boxplot(data=df, x=x_axis, y=y_axis, ax=ax)
+        elif chart_type == "小提琴图":
+            sns.violinplot(data=df, x=x_axis, y=y_axis, ax=ax)
+        
+        # 设置标签和样式
+        plt.xticks(rotation=45, ha='right', fontsize=10)
+        plt.yticks(fontsize=10)
+        ax.set_xlabel(x_axis, fontsize=12)
+        ax.set_ylabel(y_axis, fontsize=12)
+        ax.set_title(f"{chart_type}: {x_axis} vs {y_axis}", fontsize=14, pad=20)
+        
+        # 调整布局
+        plt.tight_layout()
+        return fig
+    except Exception as e:
+        st.error(f"创建图表时出错: {str(e)}")
+        return None
 
 def delete_file(filename):
     """删除指定的文件"""
