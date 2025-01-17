@@ -34,7 +34,37 @@ def show_login_page():
     """
     显示登录页面
     """
-    st.title("登录")
+    # 设置登录页面样式
+    st.markdown("""
+        <style>
+            .login-container {
+                max-width: 400px;
+                margin: 0 auto;
+                padding: 2rem;
+                margin-top: 4rem;
+            }
+            .login-title {
+                text-align: center;
+                margin-bottom: 2rem;
+                color: #262730;
+                font-size: 2rem;
+            }
+            .stButton > button {
+                width: 100%;
+                margin-top: 1rem;
+            }
+            div[data-testid="stForm"] {
+                background-color: white;
+                padding: 2rem;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # 创建居中的容器
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    st.markdown('<h1 class="login-title">登录</h1>', unsafe_allow_html=True)
     
     with st.form("login_form"):
         username = st.text_input("用户名")
@@ -46,4 +76,6 @@ def show_login_page():
                 st.success("登录成功！")
                 st.rerun()
             else:
-                st.error("用户名或密码错误！") 
+                st.error("用户名或密码错误！")
+    
+    st.markdown('</div>', unsafe_allow_html=True) 
