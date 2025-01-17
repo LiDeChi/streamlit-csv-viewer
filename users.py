@@ -38,7 +38,7 @@ def show_login_page():
     st.markdown("""
         <style>
             .login-container {
-                max-width: 240px;
+                max-width: 200px;
                 margin: 0 auto;
                 padding: 0.5rem;
                 margin-top: 2rem;
@@ -47,7 +47,7 @@ def show_login_page():
                 text-align: center;
                 margin-bottom: 1rem;
                 color: #262730;
-                font-size: 1.3rem;
+                font-size: 1.2rem;
             }
             .stButton > button {
                 width: 100%;
@@ -55,7 +55,7 @@ def show_login_page():
             }
             div[data-testid="stForm"] {
                 background-color: white;
-                padding: 1.2rem;
+                padding: 1rem;
                 border-radius: 6px;
                 box-shadow: 0 2px 6px rgba(0,0,0,0.05);
             }
@@ -65,19 +65,23 @@ def show_login_page():
             div[data-testid="stTextInput"] input {
                 font-size: 0.9rem;
             }
+            div.row-widget.stButton {
+                width: 100px;
+                margin: 0 auto;
+            }
         </style>
     """, unsafe_allow_html=True)
     
-    # 创建五列布局，中间列放置登录框
-    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 2])
+    # 创建七列布局，中间列放置登录框
+    col1, col2, col3, col4, col5, col6, col7 = st.columns([3, 2, 1, 1, 1, 2, 3])
     
-    with col3:
+    with col4:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<h1 class="login-title">登录</h1>', unsafe_allow_html=True)
         
         with st.form("login_form"):
-            username = st.text_input("用户名")
-            password = st.text_input("密码", type="password")
+            username = st.text_input("用户名", label_visibility="collapsed", placeholder="用户名")
+            password = st.text_input("密码", type="password", label_visibility="collapsed", placeholder="密码")
             submit = st.form_submit_button("登录")
             
             if submit:
