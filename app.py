@@ -82,6 +82,34 @@ def get_saved_files():
     # 按文件名排序，不再按时间戳排序
     return sorted([f for f in os.listdir('data') if f.endswith('.csv')])
 
+def get_numeric_columns(df):
+    """获取数值类型的列"""
+    return df.select_dtypes(include=[np.number]).columns.tolist()
+
+def get_categorical_columns(df):
+    """获取分类类型的列"""
+    return df.select_dtypes(exclude=[np.number]).columns.tolist()
+
+def calculate_statistics(df, group_by_col, value_col, agg_funcs):
+    """计算统计指标"""
+    if not group_by_col or not value_col:
+        return None
+    
+    agg_dict = {
+        '计数': 'count',
+        '求和': 'sum',
+        '平均值': 'mean',
+        '最大值': 'max',
+        '最小值': 'min',
+        '中位数': 'median',
+        '标准差': 'std'
+    }
+    
+    selected_aggs = {value_col: [agg_dict[func] for func in agg_funcs]}
+    result = df.groupby(group_by_col).agg(selected_aggs)
+    result.columns = result.columns.droplevel(0)  # 删除多级索引
+    return result
+
 def create_visualization(df, chart_type, x_axis, y_axis):
     """创建可视化图表"""
     # 设置中文字体
@@ -99,6 +127,10 @@ def create_visualization(df, chart_type, x_axis, y_axis):
         sns.lineplot(data=df, x=x_axis, y=y_axis, ax=ax)
     elif chart_type == "散点图":
         sns.scatterplot(data=df, x=x_axis, y=y_axis, ax=ax)
+    elif chart_type == "箱线图":
+        sns.boxplot(data=df, x=x_axis, y=y_axis, ax=ax)
+    elif chart_type == "小提琴图":
+        sns.violinplot(data=df, x=x_axis, y=y_axis, ax=ax)
     
     # 设置标签和样式
     plt.xticks(rotation=45, ha='right', fontsize=10)
@@ -154,10 +186,10 @@ else:
         # 处理每个文件
         for idx, (tab, filename) in enumerate(zip(tabs, saved_files)):
             with tab:
-                # 添加删除按钮
-                col1, col2 = st.columns([6, 1])
+                # 添加删除按钮（更柔和的样式）
+                col1, col2 = st.columns([20, 1])
                 with col2:
-                    if st.button("🗑️ 删除文件", key=f"delete_{idx}", type="primary"):
+                    if st.button("🗑️", key=f"delete_{idx}", help="删除此文件"):
                         if delete_file(filename):
                             st.success(f"文件 {filename} 已删除")
                             st.rerun()
@@ -173,6 +205,73 @@ else:
                 st.write("### 数据预览")
                 st.dataframe(df, use_container_width=True, height=400)
 
+                # 数据统计分析
+                st.write("### 数据统计")
+                stat_col1, stat_col2 = st.columns(2)
+                
+                with stat_col1:
+                    group_by_col = st.selectbox(
+                        "选择分组字段",
+                        get_categorical_columns(df),
+                        key=f"group_{idx}"
+                    )
+                    value_col = st.selectbox(
+                        "选择统计字段",
+                        get_numeric_columns(df),
+                        key=f"value_{idx}"
+                    )
+                
+                with stat_col2:
+                    agg_funcs = st.multiselect(
+                        "选择统计指标",
+                        ['计数', '求和', '平均值', '最大值', '最小值', '中位数', '标准差'],
+                        default=['计数', '平均值'],
+                        key=f"agg_{idx}"
+                    )
+                
+                if group_by_col and value_col and agg_funcs:
+                    stats_df = calculate_statistics(df, group_by_col, value_col, agg_funcs)
+                    if stats_df is not None:
+                        st.write("统计结果：")
+                        st.dataframe(stats_df, use_container_width=True)
+                        
+                        # 可视化统计结果
+                        st.write("### 统计可视化")
+                        viz_col1, viz_col2 = st.columns([1, 3])
+                        with viz_col1:
+                            chart_type = st.selectbox(
+                                "选择图表类型",
+                                ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
+                                key=f"chart_type_{idx}"
+                            )
+                            
+                            # 对于统计结果的可视化
+                            if len(agg_funcs) == 1:
+                                # 单个统计指标时直接可视化
+                                fig = create_visualization(
+                                    stats_df.reset_index(),
+                                    chart_type,
+                                    group_by_col,
+                                    agg_funcs[0]
+                                )
+                                with viz_col2:
+                                    st.pyplot(fig)
+                            else:
+                                # 多个统计指标时，让用户选择要可视化的指标
+                                selected_metric = st.selectbox(
+                                    "选择要可视化的指标",
+                                    agg_funcs,
+                                    key=f"metric_{idx}"
+                                )
+                                fig = create_visualization(
+                                    stats_df.reset_index(),
+                                    chart_type,
+                                    group_by_col,
+                                    selected_metric
+                                )
+                                with viz_col2:
+                                    st.pyplot(fig)
+
                 # 搜索功能
                 st.write("### 数据搜索")
                 search_query = st.text_input("输入搜索关键词", key=f"search_{idx}")
@@ -180,26 +279,6 @@ else:
                     df_filtered = df[df.apply(lambda row: row.astype(str).str.contains(search_query).any(), axis=1)]
                     st.write(f"搜索结果（共 {len(df_filtered)} 条记录）：")
                     st.dataframe(df_filtered, use_container_width=True)
-                
-                # 数据可视化
-                st.write("### 数据可视化")
-                viz_col1, viz_col2 = st.columns([1, 3])
-                with viz_col1:
-                    chart_type = st.selectbox(
-                        "选择图表类型",
-                        ["柱状图", "折线图", "散点图"],
-                        key=f"chart_type_{idx}"
-                    )
-                    
-                    # 获取所有列作为可选项
-                    all_columns = df.columns.tolist()
-                    x_axis = st.selectbox("选择 X 轴", all_columns, key=f"x_axis_{idx}")
-                    y_axis = st.selectbox("选择 Y 轴", all_columns, key=f"y_axis_{idx}")
-                    
-                with viz_col2:
-                    if x_axis and y_axis:
-                        fig = create_visualization(df, chart_type, x_axis, y_axis)
-                        st.pyplot(fig)
 
     else:
         st.info("暂无CSV文件，请点击右下角上传按钮添加文件")
