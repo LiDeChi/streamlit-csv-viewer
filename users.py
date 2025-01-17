@@ -44,6 +44,6 @@ def show_login_page():
         if submit:
             if login(username, password):
                 st.success("登录成功！")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("用户名或密码错误！") 
