@@ -38,16 +38,16 @@ def show_login_page():
     st.markdown("""
         <style>
             .login-container {
-                max-width: 300px;
+                max-width: 240px;
                 margin: 0 auto;
-                padding: 1rem;
+                padding: 0.5rem;
                 margin-top: 2rem;
             }
             .login-title {
                 text-align: center;
-                margin-bottom: 1.5rem;
+                margin-bottom: 1rem;
                 color: #262730;
-                font-size: 1.5rem;
+                font-size: 1.3rem;
             }
             .stButton > button {
                 width: 100%;
@@ -55,20 +55,23 @@ def show_login_page():
             }
             div[data-testid="stForm"] {
                 background-color: white;
-                padding: 1.5rem;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                padding: 1.2rem;
+                border-radius: 6px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.05);
             }
             div[data-testid="stForm"] > div[data-testid="column"] {
-                padding: 0.5rem 0;
+                padding: 0.3rem 0;
+            }
+            div[data-testid="stTextInput"] input {
+                font-size: 0.9rem;
             }
         </style>
     """, unsafe_allow_html=True)
     
-    # 创建三列布局，中间列放置登录框
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # 创建五列布局，中间列放置登录框
+    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 2])
     
-    with col2:
+    with col3:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<h1 class="login-title">登录</h1>', unsafe_allow_html=True)
         
