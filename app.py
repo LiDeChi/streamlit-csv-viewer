@@ -8,6 +8,14 @@ from datetime import datetime
 from config import PAGE_TITLE, PAGE_ICON
 from users import is_authenticated, show_login_page, logout, get_current_user
 
+# 设置matplotlib中文字体
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+
+# 设置Seaborn样式
+sns.set_style("whitegrid")
+sns.set_context("notebook", font_scale=1.2)
+
 # 设置页面标题
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
@@ -76,6 +84,10 @@ def get_saved_files():
 
 def create_visualization(df, chart_type, x_axis, y_axis):
     """创建可视化图表"""
+    # 设置中文字体
+    plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
+    plt.rcParams['axes.unicode_minus'] = False
+    
     fig, ax = plt.subplots(figsize=(12, 6))
     
     if chart_type == "柱状图":
@@ -89,7 +101,13 @@ def create_visualization(df, chart_type, x_axis, y_axis):
         sns.scatterplot(data=df, x=x_axis, y=y_axis, ax=ax)
     
     # 设置标签和样式
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=45, ha='right', fontsize=10)
+    plt.yticks(fontsize=10)
+    ax.set_xlabel(x_axis, fontsize=12)
+    ax.set_ylabel(y_axis, fontsize=12)
+    ax.set_title(f"{chart_type}: {x_axis} vs {y_axis}", fontsize=14, pad=20)
+    
+    # 调整布局
     plt.tight_layout()
     return fig
 
