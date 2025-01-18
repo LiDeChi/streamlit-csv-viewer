@@ -363,120 +363,109 @@ def main():
                 df_filtered = filter_dataframe(df)
                 
                 # 数据预览部分
-                preview_tab1, preview_tab2 = st.tabs(["数据表格", "数据可视化"])
-                
-                with preview_tab1:
-                    # 排序选项
-                    sort_cols = st.multiselect(
-                        "选择排序列",
-                        df_filtered.columns.tolist(),
-                        key=f"sort_cols_{idx}"
-                    )
-                    if sort_cols:
-                        ascending = st.checkbox("升序排列", True, key=f"sort_ascending_{idx}")
-                        df_filtered = df_filtered.sort_values(by=sort_cols, ascending=ascending)
-                    
-                    st.dataframe(df_filtered, use_container_width=True, height=400)
-                
-                with preview_tab2:
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        chart_type = st.selectbox(
-                            "选择图表类型",
-                            ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
-                            key=f"raw_chart_type_{idx}"
-                        )
-                        x_axis = st.selectbox(
-                            "选择X轴",
-                            df_filtered.columns.tolist(),
-                            key=f"raw_x_axis_{idx}"
-                        )
-                        y_axis = st.selectbox(
-                            "选择Y轴",
-                            get_numeric_columns(df_filtered),
-                            key=f"raw_y_axis_{idx}"
-                        )
-                    
-                    with col2:
-                        if x_axis and y_axis:
-                            fig = create_visualization(df_filtered, chart_type, x_axis, y_axis)
-                            if fig:
-                                st.pyplot(fig)
+                st.write("### 数据预览")
+                st.dataframe(df_filtered, use_container_width=True, height=400)
                 
                 # 数据统计分析
                 st.write("### 数据统计")
                 
-                # 添加新的统计设置
-                if st.button("添加统计", key=f"add_stat_{idx}"):
-                    if "stat_count" not in st.session_state:
-                        st.session_state.stat_count = 0
-                    st.session_state.stat_count += 1
+                # 添加新的统计设置按钮
+                col1, col2 = st.columns([8, 2])
+                with col2:
+                    if st.button("➕ 添加统计", key=f"add_stat_{idx}"):
+                        if "stat_settings" not in st.session_state:
+                            st.session_state.stat_settings = []
+                        st.session_state.stat_settings.append({
+                            'name': f'统计{len(st.session_state.stat_settings) + 1}',
+                            'group_cols': [],
+                            'value_col': None,
+                            'agg_funcs': ['计数', '平均值']
+                        })
                 
-                # 显示所有统计设置
-                stat_count = st.session_state.get("stat_count", 0)
-                for i in range(stat_count):
-                    st.write(f"统计设置 {i+1}")
-                    col1, col2, col3 = st.columns([2, 2, 1])
+                # 初始化统计设置
+                if "stat_settings" not in st.session_state:
+                    st.session_state.stat_settings = []
+                
+                # 创建统计标签页
+                if st.session_state.stat_settings:
+                    stats_tabs = st.tabs([stat['name'] for stat in st.session_state.stat_settings])
                     
-                    with col1:
-                        group_cols = st.multiselect(
-                            "选择分组字段",
-                            get_categorical_columns(df_filtered),
-                            key=f"group_{idx}_{i}"
-                        )
-                    
-                    with col2:
-                        value_col = st.selectbox(
-                            "选择统计字段",
-                            get_numeric_columns(df_filtered),
-                            key=f"value_{idx}_{i}"
-                        )
-                        agg_funcs = st.multiselect(
-                            "选择统计指标",
-                            ['计数', '求和', '平均值', '最大值', '最小值', '中位数', '标准差'],
-                            default=['计数', '平均值'],
-                            key=f"agg_{idx}_{i}"
-                        )
-                    
-                    with col3:
-                        if st.button("删除", key=f"delete_stat_{idx}_{i}"):
-                            st.session_state.stat_count -= 1
-                            st.rerun()
-                    
-                    if group_cols and value_col and agg_funcs:
-                        stats_df = calculate_statistics(df_filtered, group_cols, value_col, agg_funcs)
-                        if stats_df is not None:
-                            st.write(f"统计结果 {i+1}:")
-                            st.dataframe(stats_df, use_container_width=True)
+                    # 处理每个统计设置
+                    for i, (tab, stat) in enumerate(zip(stats_tabs, st.session_state.stat_settings)):
+                        with tab:
+                            # 统计设置标题栏
+                            col1, col2, col3 = st.columns([6, 3, 1])
+                            with col1:
+                                new_name = st.text_input("统计名称", stat['name'], key=f"stat_name_{idx}_{i}")
+                                if new_name != stat['name']:
+                                    st.session_state.stat_settings[i]['name'] = new_name
+                            with col3:
+                                if st.button("🗑️", key=f"delete_stat_{idx}_{i}", help="删除此统计"):
+                                    st.session_state.stat_settings.pop(i)
+                                    st.rerun()
                             
-                            # 可视化统计结果
-                            if st.checkbox(f"显示可视化 {i+1}", key=f"show_viz_{idx}_{i}"):
-                                viz_col1, viz_col2 = st.columns([1, 3])
-                                with viz_col1:
-                                    if len(agg_funcs) > 1:
-                                        selected_metric = st.selectbox(
-                                            "选择要可视化的指标",
-                                            agg_funcs,
-                                            key=f"metric_{idx}_{i}"
-                                        )
-                                    else:
-                                        selected_metric = agg_funcs[0]
-                                    
-                                    chart_type = st.selectbox(
-                                        "选择图表类型",
-                                        ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
-                                        key=f"stat_chart_type_{idx}_{i}"
-                                    )
+                            # 统计设置
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                group_cols = st.multiselect(
+                                    "选择分组字段",
+                                    get_categorical_columns(df_filtered),
+                                    default=stat['group_cols'],
+                                    key=f"group_{idx}_{i}"
+                                )
+                                st.session_state.stat_settings[i]['group_cols'] = group_cols
+                            
+                            with col2:
+                                value_col = st.selectbox(
+                                    "选择统计字段",
+                                    get_numeric_columns(df_filtered),
+                                    index=get_numeric_columns(df_filtered).index(stat['value_col']) if stat['value_col'] in get_numeric_columns(df_filtered) else 0,
+                                    key=f"value_{idx}_{i}"
+                                )
+                                st.session_state.stat_settings[i]['value_col'] = value_col
                                 
-                                with viz_col2:
-                                    fig = create_visualization(
-                                        stats_df.reset_index(),
-                                        chart_type,
-                                        group_cols[-1] if group_cols else None,
-                                        selected_metric
-                                    )
-                                    if fig:
-                                        st.pyplot(fig)
+                                agg_funcs = st.multiselect(
+                                    "选择统计指标",
+                                    ['计数', '求和', '平均值', '最大值', '最小值', '中位数', '标准差'],
+                                    default=stat['agg_funcs'],
+                                    key=f"agg_{idx}_{i}"
+                                )
+                                st.session_state.stat_settings[i]['agg_funcs'] = agg_funcs
+                            
+                            # 计算并显示统计结果
+                            if group_cols and value_col and agg_funcs:
+                                stats_df = calculate_statistics(df_filtered, group_cols, value_col, agg_funcs)
+                                if stats_df is not None:
+                                    st.dataframe(stats_df, use_container_width=True)
+                                    
+                                    # 可视化统计结果
+                                    if st.checkbox("显示图表", key=f"show_viz_{idx}_{i}"):
+                                        viz_col1, viz_col2 = st.columns([1, 3])
+                                        with viz_col1:
+                                            if len(agg_funcs) > 1:
+                                                selected_metric = st.selectbox(
+                                                    "选择要可视化的指标",
+                                                    agg_funcs,
+                                                    key=f"metric_{idx}_{i}"
+                                                )
+                                            else:
+                                                selected_metric = agg_funcs[0]
+                                            
+                                            chart_type = st.selectbox(
+                                                "选择图表类型",
+                                                ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
+                                                key=f"stat_chart_type_{idx}_{i}"
+                                            )
+                                        
+                                        with viz_col2:
+                                            fig = create_visualization(
+                                                stats_df.reset_index(),
+                                                chart_type,
+                                                group_cols[-1] if group_cols else None,
+                                                selected_metric
+                                            )
+                                            if fig:
+                                                st.pyplot(fig)
     else:
         st.info("暂无CSV文件，请点击右下角上传按钮添加文件")
 
