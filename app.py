@@ -125,11 +125,29 @@ def get_date_columns(df):
     date_cols = []
     for col in df.columns:
         try:
-            pd.to_datetime(df[col], errors='raise')
+            # 尝试将列转换为日期时间格式
+            pd.to_datetime(df[col], format='%Y/%m/%d', errors='raise')
             date_cols.append(col)
         except:
-            continue
+            try:
+                # 尝试其他常见日期格式
+                pd.to_datetime(df[col], errors='raise')
+                date_cols.append(col)
+            except:
+                continue
     return date_cols
+
+def process_dataframe(df):
+    """预处理数据框"""
+    # 处理百分比
+    df = process_percentage(df)
+    
+    # 处理日期列
+    date_cols = get_date_columns(df)
+    for col in date_cols:
+        df[col] = pd.to_datetime(df[col])
+    
+    return df
 
 def sort_dataframe(df, sort_cols, ascending=True):
     """对数据框进行排序"""
@@ -305,28 +323,13 @@ else:
                 # 读取CSV文件
                 filepath = os.path.join('data', filename)
                 df = pd.read_csv(filepath)
-                df = process_percentage(df)  # 处理百分比字段
+                df = process_dataframe(df)  # 预处理数据
                 
                 # 数据预览部分
                 st.write("### 数据预览")
                 preview_tab1, preview_tab2 = st.tabs(["数据表格", "数据可视化"])
                 
                 with preview_tab1:
-                    # 添加排序选项
-                    sort_cols = st.multiselect(
-                        "选择排序列",
-                        df.columns.tolist(),
-                        key=f"sort_cols_{idx}"
-                    )
-                    if sort_cols:
-                        sort_order = st.radio(
-                            "排序方式",
-                            ["升序", "降序"],
-                            horizontal=True,
-                            key=f"sort_order_{idx}"
-                        )
-                        df = sort_dataframe(df, sort_cols, ascending=(sort_order=="升序"))
-                    
                     st.dataframe(df, use_container_width=True, height=400)
                 
                 with preview_tab2:
@@ -362,19 +365,10 @@ else:
                 stat_col1, stat_col2 = st.columns(2)
                 with stat_col1:
                     group_by_cols = st.multiselect(
-                        "选择分组字段（可多选）",
+                        "选择分组字段（按选择顺序分组）",
                         get_categorical_columns(df),
                         key=f"group_{idx}"
                     )
-                    if group_by_cols:
-                        # 允许调整分组顺序
-                        st.write("拖动调整分组顺序：")
-                        group_by_cols = st.multiselect(
-                            "",
-                            group_by_cols,
-                            default=group_by_cols,
-                            key=f"group_order_{idx}"
-                        )
                     
                     value_col = st.selectbox(
                         "选择统计字段",
