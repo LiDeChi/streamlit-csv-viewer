@@ -144,7 +144,8 @@ def process_dataframe(df):
     if date_cols:
         for col in date_cols:
             try:
-                df[col] = pd.to_datetime(df[col])
+                # 转换为日期时间并只保留日期部分
+                df[col] = pd.to_datetime(df[col]).dt.date
             except:
                 st.warning(f"列 '{col}' 转换为日期类型失败")
     
