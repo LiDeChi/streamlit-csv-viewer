@@ -279,13 +279,44 @@ else:
                 df = pd.read_csv(filepath)
                 df = process_percentage(df)  # 处理百分比字段
                 
-                # 显示数据表格
-                st.dataframe(df, use_container_width=True, height=400)
+                # 数据预览部分
+                st.write("### 数据预览")
+                preview_tab1, preview_tab2 = st.tabs(["数据表格", "数据可视化"])
+                
+                with preview_tab1:
+                    st.dataframe(df, use_container_width=True, height=400)
+                
+                with preview_tab2:
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        chart_type = st.selectbox(
+                            "选择图表类型",
+                            ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
+                            key=f"raw_chart_type_{idx}"
+                        )
+                        x_axis = st.selectbox(
+                            "选择X轴",
+                            df.columns.tolist(),
+                            key=f"raw_x_axis_{idx}"
+                        )
+                        y_axis = st.selectbox(
+                            "选择Y轴",
+                            get_numeric_columns(df),
+                            key=f"raw_y_axis_{idx}"
+                        )
+                    
+                    with col2:
+                        if x_axis and y_axis:
+                            fig = create_visualization(df, chart_type, x_axis, y_axis)
+                            if fig:
+                                st.pyplot(fig)
 
                 # 数据统计分析
                 st.write("### 数据统计")
-                stat_col1, stat_col2 = st.columns(2)
+                stat_tab1, stat_tab2 = st.tabs(["统计结果", "统计可视化"])
                 
+                # 在两个标签页之外定义统计选项
+                stat_col1, stat_col2 = st.columns(2)
                 with stat_col1:
                     group_by_col = st.selectbox(
                         "选择分组字段",
@@ -309,44 +340,35 @@ else:
                 if group_by_col and value_col and agg_funcs:
                     stats_df = calculate_statistics(df, group_by_col, value_col, agg_funcs)
                     if stats_df is not None:
-                        st.write("统计结果：")
-                        st.dataframe(stats_df, use_container_width=True)
+                        with stat_tab1:
+                            st.dataframe(stats_df, use_container_width=True)
                         
-                        # 可视化统计结果
-                        st.write("### 统计可视化")
-                        viz_col1, viz_col2 = st.columns([1, 3])
-                        with viz_col1:
-                            chart_type = st.selectbox(
-                                "选择图表类型",
-                                ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
-                                key=f"chart_type_{idx}"
-                            )
+                        with stat_tab2:
+                            viz_col1, viz_col2 = st.columns([1, 3])
+                            with viz_col1:
+                                if len(agg_funcs) > 1:
+                                    selected_metric = st.selectbox(
+                                        "选择要可视化的指标",
+                                        agg_funcs,
+                                        key=f"metric_{idx}"
+                                    )
+                                else:
+                                    selected_metric = agg_funcs[0]
+                                
+                                chart_type = st.selectbox(
+                                    "选择图表类型",
+                                    ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
+                                    key=f"stat_chart_type_{idx}"
+                                )
                             
-                            # 对于统计结果的可视化
-                            if len(agg_funcs) == 1:
-                                # 单个统计指标时直接可视化
-                                fig = create_visualization(
-                                    stats_df.reset_index(),
-                                    chart_type,
-                                    group_by_col,
-                                    agg_funcs[0]
-                                )
-                                with viz_col2:
-                                    st.pyplot(fig)
-                            else:
-                                # 多个统计指标时，让用户选择要可视化的指标
-                                selected_metric = st.selectbox(
-                                    "选择要可视化的指标",
-                                    agg_funcs,
-                                    key=f"metric_{idx}"
-                                )
+                            with viz_col2:
                                 fig = create_visualization(
                                     stats_df.reset_index(),
                                     chart_type,
                                     group_by_col,
                                     selected_metric
                                 )
-                                with viz_col2:
+                                if fig:
                                     st.pyplot(fig)
 
                 # 搜索功能
@@ -354,8 +376,37 @@ else:
                 search_query = st.text_input("输入搜索关键词", key=f"search_{idx}")
                 if search_query:
                     df_filtered = df[df.apply(lambda row: row.astype(str).str.contains(search_query).any(), axis=1)]
-                    st.write(f"搜索结果（共 {len(df_filtered)} 条记录）：")
-                    st.dataframe(df_filtered, use_container_width=True)
+                    search_tab1, search_tab2 = st.tabs(["搜索结果", "结果可视化"])
+                    
+                    with search_tab1:
+                        st.write(f"搜索结果（共 {len(df_filtered)} 条记录）：")
+                        st.dataframe(df_filtered, use_container_width=True)
+                    
+                    with search_tab2:
+                        if not df_filtered.empty:
+                            col1, col2 = st.columns([1, 3])
+                            with col1:
+                                chart_type = st.selectbox(
+                                    "选择图表类型",
+                                    ["柱状图", "折线图", "散点图", "箱线图", "小提琴图"],
+                                    key=f"search_chart_type_{idx}"
+                                )
+                                x_axis = st.selectbox(
+                                    "选择X轴",
+                                    df_filtered.columns.tolist(),
+                                    key=f"search_x_axis_{idx}"
+                                )
+                                y_axis = st.selectbox(
+                                    "选择Y轴",
+                                    get_numeric_columns(df_filtered),
+                                    key=f"search_y_axis_{idx}"
+                                )
+                            
+                            with col2:
+                                if x_axis and y_axis:
+                                    fig = create_visualization(df_filtered, chart_type, x_axis, y_axis)
+                                    if fig:
+                                        st.pyplot(fig)
 
     else:
         st.info("暂无CSV文件，请点击右下角上传按钮添加文件")
