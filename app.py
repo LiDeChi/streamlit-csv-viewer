@@ -83,25 +83,27 @@ def format_percentage(value):
         return f"{value:.2%}"
     return value
 
-def save_uploaded_file(uploaded_file):
-    """保存上传的文件到data目录"""
+def save_uploaded_files(files):
+    """保存上传的多个文件到data目录"""
     if not os.path.exists('data'):
         os.makedirs('data')
     
-    # 直接使用原始文件名
-    filename = uploaded_file.name
-    filepath = os.path.join('data', filename)
+    saved_files = []
+    for file in files:
+        if file.name.endswith('.csv'):
+            filename = file.name
+            filepath = os.path.join('data', filename)
+            with open(filepath, 'wb') as f:
+                f.write(file.getbuffer())
+            saved_files.append(filename)
     
-    # 如果文件已存在，直接覆盖
-    with open(filepath, 'wb') as f:
-        f.write(uploaded_file.getbuffer())
-    return filepath
+    return saved_files
 
 def get_saved_files():
     """获取已保存的CSV文件列表"""
     if not os.path.exists('data'):
         return []
-    # 按文件名排序，不再按时间戳排序
+    # 按文件名排序
     return sorted([f for f in os.listdir('data') if f.endswith('.csv')])
 
 def get_numeric_columns(df):
@@ -207,10 +209,12 @@ else:
     # 创建固定在右下角的上传按钮
     with st.container():
         st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-        uploaded_file = st.file_uploader("上传新的CSV文件", type=["csv"])
-        if uploaded_file:
-            save_uploaded_file(uploaded_file)
-            st.rerun()
+        uploaded_files = st.file_uploader("上传CSV文件", type=["csv"], accept_multiple_files=True)
+        if uploaded_files:
+            saved_files = save_uploaded_files(uploaded_files)
+            if saved_files:
+                st.success(f"成功上传 {len(saved_files)} 个CSV文件")
+                st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     
     # 获取所有保存的文件
