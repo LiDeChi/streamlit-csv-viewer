@@ -120,18 +120,109 @@ def get_categorical_columns(df):
         st.warning("当前数据中没有分类类型的列")
     return categorical_cols
 
-def calculate_statistics(df, group_by_col, value_col, agg_funcs):
-    """计算统计指标"""
-    if not group_by_col or not value_col:
+def get_date_columns(df):
+    """获取日期类型的列"""
+    date_cols = []
+    for col in df.columns:
+        try:
+            pd.to_datetime(df[col], errors='raise')
+            date_cols.append(col)
+        except:
+            continue
+    return date_cols
+
+def process_dataframe(df):
+    """预处理数据框"""
+    # 处理百分比
+    df = process_percentage(df)
+    
+    # 处理日期列
+    date_cols = get_date_columns(df)
+    for col in date_cols:
+        df[col] = pd.to_datetime(df[col])
+    
+    return df
+
+def filter_dataframe(df):
+    """添加数据筛选功能"""
+    st.write("#### 数据筛选")
+    
+    # 创建多列布局
+    filter_cols = st.columns(3)
+    
+    # 获取不同类型的列
+    date_cols = get_date_columns(df)
+    numeric_cols = get_numeric_columns(df)
+    categorical_cols = get_categorical_columns(df)
+    
+    filters = {}
+    
+    # 日期筛选
+    if date_cols:
+        with filter_cols[0]:
+            st.write("日期筛选")
+            for col in date_cols:
+                min_date = df[col].min()
+                max_date = df[col].max()
+                date_range = st.date_input(
+                    f"选择{col}范围",
+                    value=(min_date, max_date),
+                    min_value=min_date.date(),
+                    max_value=max_date.date()
+                )
+                if len(date_range) == 2:
+                    start_date, end_date = date_range
+                    mask = (df[col].dt.date >= start_date) & (df[col].dt.date <= end_date)
+                    filters[col] = mask
+    
+    # 数值筛选
+    if numeric_cols:
+        with filter_cols[1]:
+            st.write("数值筛选")
+            for col in numeric_cols:
+                min_val = float(df[col].min())
+                max_val = float(df[col].max())
+                values = st.slider(
+                    f"选择{col}范围",
+                    min_value=min_val,
+                    max_value=max_val,
+                    value=(min_val, max_val)
+                )
+                if values != (min_val, max_val):
+                    filters[col] = (df[col] >= values[0]) & (df[col] <= values[1])
+    
+    # 分类筛选
+    if categorical_cols:
+        with filter_cols[2]:
+            st.write("分类筛选")
+            for col in categorical_cols:
+                options = df[col].unique().tolist()
+                selected = st.multiselect(
+                    f"选择{col}值",
+                    options=options,
+                    default=options
+                )
+                if len(selected) < len(options):
+                    filters[col] = df[col].isin(selected)
+    
+    # 应用所有筛选条件
+    if filters:
+        final_mask = pd.Series(True, index=df.index)
+        for mask in filters.values():
+            final_mask &= mask
+        return df[final_mask]
+    return df
+
+def calculate_statistics(df, group_by_cols, value_cols, agg_funcs):
+    """计算统计指标（支持多分组和多统计）"""
+    if not group_by_cols or not value_cols or not agg_funcs:
         return None
     
-    if group_by_col not in df.columns:
-        st.error(f"分组列 '{group_by_col}' 不存在于数据中")
-        return None
-    
-    if value_col not in df.columns:
-        st.error(f"统计列 '{value_col}' 不存在于数据中")
-        return None
+    # 检查列是否存在
+    for col in group_by_cols + value_cols:
+        if col not in df.columns:
+            st.error(f"列 '{col}' 不存在于数据中")
+            return None
     
     try:
         agg_dict = {
@@ -144,9 +235,25 @@ def calculate_statistics(df, group_by_col, value_col, agg_funcs):
             '标准差': 'std'
         }
         
-        selected_aggs = {value_col: [agg_dict[func] for func in agg_funcs]}
-        result = df.groupby(group_by_col).agg(selected_aggs)
-        result.columns = result.columns.droplevel(0)  # 删除多级索引
+        # 构建聚合字典
+        aggs = {}
+        for col in value_cols:
+            aggs[col] = [agg_dict[func] for func in agg_funcs]
+        
+        # 按指定顺序进行分组
+        result = df.groupby(group_by_cols).agg(aggs)
+        
+        # 处理结果列名
+        result.columns = [f"{col}_{agg}" for col, agg in result.columns]
+        
+        # 重置索引，将分组列变为普通列
+        result = result.reset_index()
+        
+        # 如果有日期列，按日期排序
+        date_cols = [col for col in group_by_cols if col in get_date_columns(df)]
+        if date_cols:
+            result = result.sort_values(date_cols, ascending=False)
+        
         return result
     except Exception as e:
         st.error(f"计算统计指标时出错: {str(e)}")
@@ -277,14 +384,36 @@ else:
                 # 读取CSV文件
                 filepath = os.path.join('data', filename)
                 df = pd.read_csv(filepath)
-                df = process_percentage(df)  # 处理百分比字段
+                df = process_dataframe(df)  # 预处理数据框
                 
                 # 数据预览部分
                 st.write("### 数据预览")
+                
+                # 添加筛选功能
+                df_filtered = filter_dataframe(df)
+                
                 preview_tab1, preview_tab2 = st.tabs(["数据表格", "数据可视化"])
                 
                 with preview_tab1:
-                    st.dataframe(df, use_container_width=True, height=400)
+                    # 添加排序选项
+                    sort_cols = st.multiselect(
+                        "选择排序列",
+                        df_filtered.columns.tolist(),
+                        key=f"sort_cols_{idx}"
+                    )
+                    if sort_cols:
+                        sort_orders = []
+                        for col in sort_cols:
+                            order = st.radio(
+                                f"{col}排序方式",
+                                ["升序", "降序"],
+                                horizontal=True,
+                                key=f"sort_order_{idx}_{col}"
+                            )
+                            sort_orders.append(order == "升序")
+                        df_filtered = df_filtered.sort_values(sort_cols, ascending=sort_orders)
+                    
+                    st.dataframe(df_filtered, use_container_width=True, height=400)
                 
                 with preview_tab2:
                     col1, col2 = st.columns([1, 3])
@@ -296,18 +425,18 @@ else:
                         )
                         x_axis = st.selectbox(
                             "选择X轴",
-                            df.columns.tolist(),
+                            df_filtered.columns.tolist(),
                             key=f"raw_x_axis_{idx}"
                         )
                         y_axis = st.selectbox(
                             "选择Y轴",
-                            get_numeric_columns(df),
+                            get_numeric_columns(df_filtered),
                             key=f"raw_y_axis_{idx}"
                         )
                     
                     with col2:
                         if x_axis and y_axis:
-                            fig = create_visualization(df, chart_type, x_axis, y_axis)
+                            fig = create_visualization(df_filtered, chart_type, x_axis, y_axis)
                             if fig:
                                 st.pyplot(fig)
 
@@ -318,13 +447,13 @@ else:
                 # 在两个标签页之外定义统计选项
                 stat_col1, stat_col2 = st.columns(2)
                 with stat_col1:
-                    group_by_col = st.selectbox(
-                        "选择分组字段",
-                        get_categorical_columns(df),
+                    group_by_cols = st.multiselect(
+                        "选择分组字段（可多选，顺序影响分组顺序）",
+                        get_categorical_columns(df) + get_date_columns(df),
                         key=f"group_{idx}"
                     )
-                    value_col = st.selectbox(
-                        "选择统计字段",
+                    value_cols = st.multiselect(
+                        "选择统计字段（可多选）",
                         get_numeric_columns(df),
                         key=f"value_{idx}"
                     )
@@ -337,10 +466,28 @@ else:
                         key=f"agg_{idx}"
                     )
                 
-                if group_by_col and value_col and agg_funcs:
-                    stats_df = calculate_statistics(df, group_by_col, value_col, agg_funcs)
+                if group_by_cols and value_cols and agg_funcs:
+                    stats_df = calculate_statistics(df_filtered, group_by_cols, value_cols, agg_funcs)
                     if stats_df is not None:
                         with stat_tab1:
+                            # 添加统计结果的排序选项
+                            sort_cols = st.multiselect(
+                                "选择排序列",
+                                stats_df.columns.tolist(),
+                                key=f"stat_sort_cols_{idx}"
+                            )
+                            if sort_cols:
+                                sort_orders = []
+                                for col in sort_cols:
+                                    order = st.radio(
+                                        f"{col}排序方式",
+                                        ["升序", "降序"],
+                                        horizontal=True,
+                                        key=f"stat_sort_order_{idx}_{col}"
+                                    )
+                                    sort_orders.append(order == "升序")
+                                stats_df = stats_df.sort_values(sort_cols, ascending=sort_orders)
+                            
                             st.dataframe(stats_df, use_container_width=True)
                         
                         with stat_tab2:
@@ -365,7 +512,7 @@ else:
                                 fig = create_visualization(
                                     stats_df.reset_index(),
                                     chart_type,
-                                    group_by_col,
+                                    group_by_cols,
                                     selected_metric
                                 )
                                 if fig:
@@ -375,7 +522,7 @@ else:
                 st.write("### 数据搜索")
                 search_query = st.text_input("输入搜索关键词", key=f"search_{idx}")
                 if search_query:
-                    df_filtered = df[df.apply(lambda row: row.astype(str).str.contains(search_query).any(), axis=1)]
+                    df_filtered = df_filtered[df_filtered.apply(lambda row: row.astype(str).str.contains(search_query).any(), axis=1)]
                     search_tab1, search_tab2 = st.tabs(["搜索结果", "结果可视化"])
                     
                     with search_tab1:
