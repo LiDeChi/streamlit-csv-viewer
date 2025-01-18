@@ -22,13 +22,17 @@ def is_authenticated() -> bool:
     """
     检查用户是否已认证
     """
-    return st.session_state.get(SESSION_STATE_AUTHENTICATED, False)
+    # 默认返回True，跳过登录验证
+    return True
+    # return st.session_state.get(SESSION_STATE_AUTHENTICATED, False)
 
 def get_current_user() -> str:
     """
     获取当前登录用户
     """
-    return st.session_state.get(SESSION_STATE_USER, None)
+    # 默认返回访客用户
+    return "访客"
+    # return st.session_state.get(SESSION_STATE_USER, None)
 
 def show_login_page():
     """

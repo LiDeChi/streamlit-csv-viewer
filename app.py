@@ -195,10 +195,11 @@ else:
     col1, col2, col3 = st.columns([1, 8, 1])
     with col1:
         st.write(f"欢迎, {get_current_user()}")
-    with col3:
-        if st.button("登出"):
-            logout()
-            st.rerun()
+    # 暂时注释掉登出功能
+    # with col3:
+    #     if st.button("登出"):
+    #         logout()
+    #         st.rerun()
     
     # 主要应用内容
     st.title("CSV 文件分析系统")
