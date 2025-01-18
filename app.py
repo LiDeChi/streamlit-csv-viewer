@@ -124,13 +124,10 @@ def get_date_columns(df):
     """获取日期类型的列"""
     date_cols = []
     for col in df.columns:
-        try:
-            # 尝试将列转换为日期时间格式
-            pd.to_datetime(df[col], format='%Y/%m/%d', errors='raise')
-            date_cols.append(col)
-        except:
+        # 只检查包含特定关键词的列
+        if any(keyword in col.lower() for keyword in ['date', 'time', '日期', '时间']):
             try:
-                # 尝试其他常见日期格式
+                # 尝试将列转换为日期时间格式
                 pd.to_datetime(df[col], errors='raise')
                 date_cols.append(col)
             except:
@@ -144,8 +141,12 @@ def process_dataframe(df):
     
     # 处理日期列
     date_cols = get_date_columns(df)
-    for col in date_cols:
-        df[col] = pd.to_datetime(df[col])
+    if date_cols:
+        for col in date_cols:
+            try:
+                df[col] = pd.to_datetime(df[col])
+            except:
+                st.warning(f"列 '{col}' 转换为日期类型失败")
     
     return df
 
@@ -156,8 +157,9 @@ def sort_dataframe(df, sort_cols, ascending=True):
     try:
         # 转换日期列
         df_copy = df.copy()
+        date_cols = get_date_columns(df)
         for col in sort_cols:
-            if col in get_date_columns(df):
+            if col in date_cols:
                 df_copy[col] = pd.to_datetime(df_copy[col])
         return df_copy.sort_values(by=sort_cols, ascending=ascending)
     except Exception as e:
