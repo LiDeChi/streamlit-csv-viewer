@@ -108,51 +108,87 @@ def get_saved_files():
 
 def get_numeric_columns(df):
     """获取数值类型的列"""
-    return df.select_dtypes(include=[np.number]).columns.tolist()
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if not numeric_cols:
+        st.warning("当前数据中没有数值类型的列")
+    return numeric_cols
 
 def get_categorical_columns(df):
     """获取分类类型的列"""
-    return df.select_dtypes(exclude=[np.number]).columns.tolist()
+    categorical_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+    if not categorical_cols:
+        st.warning("当前数据中没有分类类型的列")
+    return categorical_cols
 
 def calculate_statistics(df, group_by_col, value_col, agg_funcs):
     """计算统计指标"""
     if not group_by_col or not value_col:
         return None
     
-    agg_dict = {
-        '计数': 'count',
-        '求和': 'sum',
-        '平均值': 'mean',
-        '最大值': 'max',
-        '最小值': 'min',
-        '中位数': 'median',
-        '标准差': 'std'
-    }
+    if group_by_col not in df.columns:
+        st.error(f"分组列 '{group_by_col}' 不存在于数据中")
+        return None
     
-    selected_aggs = {value_col: [agg_dict[func] for func in agg_funcs]}
-    result = df.groupby(group_by_col).agg(selected_aggs)
-    result.columns = result.columns.droplevel(0)  # 删除多级索引
-    return result
+    if value_col not in df.columns:
+        st.error(f"统计列 '{value_col}' 不存在于数据中")
+        return None
+    
+    try:
+        agg_dict = {
+            '计数': 'count',
+            '求和': 'sum',
+            '平均值': 'mean',
+            '最大值': 'max',
+            '最小值': 'min',
+            '中位数': 'median',
+            '标准差': 'std'
+        }
+        
+        selected_aggs = {value_col: [agg_dict[func] for func in agg_funcs]}
+        result = df.groupby(group_by_col).agg(selected_aggs)
+        result.columns = result.columns.droplevel(0)  # 删除多级索引
+        return result
+    except Exception as e:
+        st.error(f"计算统计指标时出错: {str(e)}")
+        return None
 
 def create_visualization(df, chart_type, x_axis, y_axis):
     """创建可视化图表"""
+    if x_axis not in df.columns:
+        st.error(f"列 '{x_axis}' 不存在于数据中")
+        return None
+    
+    if y_axis not in df.columns:
+        st.error(f"列 '{y_axis}' 不存在于数据中")
+        return None
+    
     # 设置中文字体
     plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
     plt.rcParams['axes.unicode_minus'] = False
     
     # 确保数据是可视化的格式
     df = df.copy()
+    
+    # 检查并转换 y 轴数据
     if df[y_axis].dtype == 'object':
         try:
             df[y_axis] = pd.to_numeric(df[y_axis], errors='coerce')
-        except:
-            st.error(f"无法将 {y_axis} 列转换为数值类型")
+            if df[y_axis].isna().all():
+                st.error(f"列 '{y_axis}' 无法转换为数值类型")
+                return None
+        except Exception as e:
+            st.error(f"转换列 '{y_axis}' 时出错: {str(e)}")
             return None
     
-    # 创建图表
-    fig, ax = plt.subplots(figsize=(12, 6))
+    # 检查数据是否为空
+    if df[y_axis].isna().all():
+        st.error(f"列 '{y_axis}' 所有值都为空")
+        return None
     
+    # 创建图表
     try:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
         if chart_type == "柱状图":
             # 如果数据点过多，只显示前20个
             if len(df) > 20:
